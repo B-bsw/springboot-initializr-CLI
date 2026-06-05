@@ -1,0 +1,28 @@
+[package]
+name = "spring-init"
+version = "1.2.1"
+edition = "2024"
+description = "Spring Initializr CLI — generate Spring Boot projects from the terminal"
+authors = ["bbsw <sorawitthassadorn15@gmail.com>"]
+
+[[bin]]
+name = "spring-init"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+dialoguer = { version = "0.11", features = ["fuzzy-select"] }
+console = "0.15"
+reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+zip = "2"
+indicatif = "0.17"
+dirs = "6"
+open = "5"
+
+[profile.release]
+opt-level = "z"
+lto = true
+strip = true
