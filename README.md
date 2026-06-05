@@ -6,7 +6,14 @@ Built in **Rust** for speed. Zero runtime dependencies.
 
 ## Install
 
+**Via Curl (Recommended):**
 ```bash
+curl -sSL https://raw.githubusercontent.com/B-bsw/springboot-initalizr-CLI/main/install.sh | bash
+```
+
+**Via Cargo:**
+```bash
+git clone https://github.com/B-bsw/springboot-initalizr-CLI.git
 cd springboot-initalizr-CLI
 cargo install --path .
 ```
