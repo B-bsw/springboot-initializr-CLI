@@ -20,6 +20,18 @@ cargo install --path .
 
 This installs `spring-init` to `~/.cargo/bin/`.
 
+## Uninstall
+
+If you installed via **curl**, you can remove the binary by running:
+```bash
+rm -f /usr/local/bin/spring-init ~/.local/bin/spring-init
+```
+
+If you installed via **cargo**, use:
+```bash
+cargo uninstall spring-init
+```
+
 ## Usage
 
 ### Interactive wizard (default)
