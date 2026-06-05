@@ -7,7 +7,7 @@ Built in **Rust** for speed. Zero runtime dependencies.
 ## Install
 
 ```bash
-cd cli
+cd springboot-initalizr-CLI
 cargo install --path .
 ```
 
