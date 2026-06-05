@@ -95,7 +95,7 @@ spring-init list config    # properties/yaml
 ## Build from source
 
 ```bash
-cd cli
+cd springboot-initalizr-CLI
 cargo build --release
-# Binary at: cli/target/release/spring-init
+# Binary at: springboot-initalizr-CLI/target/release/spring-init
 ```

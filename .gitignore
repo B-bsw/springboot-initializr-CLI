@@ -1,2 +1,5 @@
 /target
 /.idea
+
+# os
+.DS_Store
