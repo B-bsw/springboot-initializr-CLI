@@ -143,7 +143,21 @@ pub async fn run_interactive() -> Result<(), String> {
     let output_dir = PathBuf::from(shellexpand(&output_str));
 
     // ── IDE ────────────────────────────────────────────────────────────
-    let ide_options = vec!["None", "idea (IntelliJ IDEA)", "code (VS Code)", "Other"];
+    let mut ide_options = vec!["None".to_string()];
+    let mut ide_commands = vec![None];
+    
+    if is_ide_available("idea") {
+        ide_options.push("idea (IntelliJ IDEA)".to_string());
+        ide_commands.push(Some("idea".to_string()));
+    }
+    if is_ide_available("code") {
+        ide_options.push("code (VS Code)".to_string());
+        ide_commands.push(Some("code".to_string()));
+    }
+    
+    ide_options.push("Other".to_string());
+    ide_commands.push(Some("other".to_string()));
+
     let ide_idx = Select::with_theme(&theme)
         .with_prompt("  Open in IDE after generation?")
         .items(&ide_options)
@@ -151,18 +165,16 @@ pub async fn run_interactive() -> Result<(), String> {
         .interact()
         .map_err(|e| format!("Select error: {e}"))?;
 
-    let ide = match ide_idx {
-        0 => None,
-        1 => Some("idea".to_string()),
-        2 => Some("code".to_string()),
-        3 => {
+    let ide = match ide_commands[ide_idx].as_deref() {
+        None => None,
+        Some("other") => {
             let custom: String = Input::with_theme(&theme)
                 .with_prompt("  IDE command")
                 .interact_text()
                 .map_err(|e| format!("Input error: {e}"))?;
             Some(custom)
         }
-        _ => None,
+        Some(cmd) => Some(cmd.to_string()),
     };
 
     // ── Generate ───────────────────────────────────────────────────────
@@ -479,4 +491,67 @@ fn shellexpand(path: &str) -> String {
         }
     }
     path.to_string()
+}
+
+fn is_ide_available(cmd: &str) -> bool {
+    if let Ok(path) = std::env::var("PATH") {
+        for dir in std::env::split_paths(&path) {
+            let exe = dir.join(cmd);
+            if exe.is_file() {
+                return true;
+            }
+            #[cfg(target_os = "windows")]
+            {
+                if dir.join(format!("{}.exe", cmd)).is_file() || dir.join(format!("{}.cmd", cmd)).is_file() {
+                    return true;
+                }
+            }
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        let home = std::env::var("HOME").unwrap_or_default();
+        if cmd == "idea" {
+            let paths = [
+                "/Applications/IntelliJ IDEA.app".to_string(),
+                "/Applications/IntelliJ IDEA CE.app".to_string(),
+                format!("{}/Applications/JetBrains Toolbox/IntelliJ IDEA Ultimate.app", home),
+                format!("{}/Applications/JetBrains Toolbox/IntelliJ IDEA Community Edition.app", home),
+            ];
+            for p in &paths {
+                if std::path::Path::new(p).exists() {
+                    return true;
+                }
+            }
+            if let Ok(output) = std::process::Command::new("mdfind")
+                .arg("kMDItemCFBundleIdentifier == 'com.jetbrains.intellij' || kMDItemCFBundleIdentifier == 'com.jetbrains.intellij.ce'")
+                .output()
+            {
+                if !output.stdout.is_empty() && output.stdout.iter().any(|&b| !b.is_ascii_whitespace()) {
+                    return true;
+                }
+            }
+        } else if cmd == "code" {
+            let paths = [
+                "/Applications/Visual Studio Code.app".to_string(),
+                format!("{}/Applications/Visual Studio Code.app", home),
+            ];
+            for p in &paths {
+                if std::path::Path::new(p).exists() {
+                    return true;
+                }
+            }
+            if let Ok(output) = std::process::Command::new("mdfind")
+                .arg("kMDItemCFBundleIdentifier == 'com.microsoft.VSCode'")
+                .output()
+            {
+                if !output.stdout.is_empty() && output.stdout.iter().any(|&b| !b.is_ascii_whitespace()) {
+                    return true;
+                }
+            }
+        }
+    }
+
+    false
 }

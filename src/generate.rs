@@ -158,11 +158,41 @@ pub async fn run(args: NewArgs) -> Result<(), String> {
     // Open IDE
     if let Some(ide) = &args.ide {
         println!("\x1b[2mOpening in {ide}...\x1b[0m");
-        let _ = open::that_in_background(target.to_str().unwrap_or("."));
-        // Try the specific IDE command
-        let _ = std::process::Command::new(ide)
+        
+        let spawn_result = std::process::Command::new(ide)
             .arg(&target)
             .spawn();
+            
+        let mut success = spawn_result.is_ok();
+        
+        if !success && ide == "idea" {
+            #[cfg(target_os = "macos")]
+            {
+                if let Ok(status) = std::process::Command::new("open")
+                    .arg("-a")
+                    .arg("IntelliJ IDEA")
+                    .arg(&target)
+                    .status()
+                {
+                    success = status.success();
+                    if !success {
+                        if let Ok(status_ce) = std::process::Command::new("open")
+                            .arg("-a")
+                            .arg("IntelliJ IDEA CE")
+                            .arg(&target)
+                            .status()
+                        {
+                            success = status_ce.success();
+                        }
+                    }
+                }
+            }
+        }
+        
+        if !success {
+            // Fallback to opening the folder if IDE fails
+            let _ = open::that_in_background(target.to_str().unwrap_or("."));
+        }
     }
 
     Ok(())
