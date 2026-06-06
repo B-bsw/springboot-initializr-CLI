@@ -90,9 +90,12 @@ pub async fn run(args: NewArgs) -> Result<(), String> {
     let packaging = resolve_or_default(&args.packaging, &meta.defaults.packaging);
     let java = resolve_or_default(&args.java, &meta.defaults.java);
     let config_format = resolve_or_default(&args.config_format, &meta.defaults.config_format);
+    let safe_artifact = artifact.replace("-", "").replace("_", "");
     let package_name = args
         .package_name
-        .unwrap_or_else(|| format!("{group}.{artifact}"));
+        .clone()
+        .filter(|s| !s.trim().is_empty())
+        .unwrap_or_else(|| format!("{group}.{safe_artifact}"));
 
     // Validate
     validate_option(&project, &meta.projects, "project type")?;

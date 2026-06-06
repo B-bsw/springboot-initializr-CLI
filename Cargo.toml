@@ -1,6 +1,6 @@
 [package]
 name = "spring-init"
-version = "1.2.1"
+version = "1.2.2"
 edition = "2024"
 description = "Spring Initializr CLI — generate Spring Boot projects from the terminal"
 authors = ["bbsw <sorawitthassadorn15@gmail.com>"]

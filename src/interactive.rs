@@ -1,7 +1,7 @@
 use crate::generate;
 use crate::metadata::{self, DepOption};
 use console::style;
-use dialoguer::{theme::ColorfulTheme, Input, Select};
+use dialoguer::{Input, Select, theme::ColorfulTheme};
 use std::path::PathBuf;
 
 pub async fn run_interactive() -> Result<(), String> {
@@ -11,10 +11,7 @@ pub async fn run_interactive() -> Result<(), String> {
         style("🍃").green(),
         style("Spring Initializr").bold().green()
     );
-    println!(
-        "  {}",
-        style("Interactive project generator").dim()
-    );
+    println!("  {}", style("Interactive project generator").dim());
     println!();
 
     // Fetch metadata
@@ -41,12 +38,7 @@ pub async fn run_interactive() -> Result<(), String> {
     let project = &meta.projects[project_idx];
 
     // ── Language ────────────────────────────────────────────────────────
-    let lang_idx = select_option(
-        &theme,
-        "Language",
-        &meta.languages,
-        &meta.defaults.language,
-    )?;
+    let lang_idx = select_option(&theme, "Language", &meta.languages, &meta.defaults.language)?;
     let language = &meta.languages[lang_idx];
 
     // ── Boot version ───────────────────────────────────────────────────
@@ -60,10 +52,7 @@ pub async fn run_interactive() -> Result<(), String> {
 
     // ── Project metadata ───────────────────────────────────────────────
     println!();
-    println!(
-        "  {}",
-        style("Project Metadata").bold().underlined()
-    );
+    println!("  {}", style("Project Metadata").bold().underlined());
 
     let name: String = Input::with_theme(&theme)
         .with_prompt("  Name")
@@ -83,7 +72,8 @@ pub async fn run_interactive() -> Result<(), String> {
         .interact_text()
         .map_err(|e| format!("Input error: {e}"))?;
 
-    let default_package = format!("{group}.{artifact}");
+    let safe_artifact = artifact.replace("-", "").replace("_", "");
+    let default_package = format!("{group}.{safe_artifact}");
     let package_name: String = Input::with_theme(&theme)
         .with_prompt("  Package name")
         .default(default_package)
@@ -119,10 +109,7 @@ pub async fn run_interactive() -> Result<(), String> {
 
     // ── Dependencies ───────────────────────────────────────────────────
     println!();
-    println!(
-        "  {}",
-        style("Dependencies").bold().underlined()
-    );
+    println!("  {}", style("Dependencies").bold().underlined());
     println!(
         "  {}",
         style("Select dependencies (space to toggle, enter to confirm)").dim()
@@ -145,7 +132,7 @@ pub async fn run_interactive() -> Result<(), String> {
     // ── IDE ────────────────────────────────────────────────────────────
     let mut ide_options = vec!["None".to_string()];
     let mut ide_commands = vec![None];
-    
+
     if is_ide_available("idea") {
         ide_options.push("idea (IntelliJ IDEA)".to_string());
         ide_commands.push(Some("idea".to_string()));
@@ -154,7 +141,7 @@ pub async fn run_interactive() -> Result<(), String> {
         ide_options.push("code (VS Code)".to_string());
         ide_commands.push(Some("code".to_string()));
     }
-    
+
     ide_options.push("Other".to_string());
     ide_commands.push(Some("other".to_string()));
 
@@ -315,7 +302,8 @@ fn select_dependencies(
 
         // Dependencies list
         for (i, dep) in page.deps.iter().enumerate() {
-            let is_compatible = is_boot_version_in_range(boot_version, dep.version_range.as_deref());
+            let is_compatible =
+                is_boot_version_in_range(boot_version, dep.version_range.as_deref());
             let is_selected = selected_keys.contains(&dep.key) && is_compatible;
             let is_cursor = i == cursor;
 
@@ -344,7 +332,11 @@ fn select_dependencies(
             if !is_compatible {
                 let raw_range = dep.version_range.as_deref().unwrap_or("");
                 let formatted_range = crate::version::format_version_range(raw_range);
-                name_styled = format!("{} {}", name_styled, style(format!("(Requires Boot {})", formatted_range)).red());
+                name_styled = format!(
+                    "{} {}",
+                    name_styled,
+                    style(format!("(Requires Boot {})", formatted_range)).red()
+                );
             }
 
             let pointer = if is_cursor {
@@ -377,14 +369,13 @@ fn select_dependencies(
             };
             let _ = term.write_line(&format!(
                 "  {} {}",
-                style(format!("{} selected:", total_selected)).green().bold(),
+                style(format!("{} selected:", total_selected))
+                    .green()
+                    .bold(),
                 style(summary_text).green()
             ));
         } else {
-            let _ = term.write_line(&format!(
-                "  {}",
-                style("No dependencies selected").dim()
-            ));
+            let _ = term.write_line(&format!("  {}", style("No dependencies selected").dim()));
         }
 
         // ── Read key ───────────────────────────────────────────────
@@ -464,7 +455,9 @@ fn select_dependencies(
         println!(
             "  {} {} {}",
             style("◉").green(),
-            style(format!("{} dependencies:", result.len())).green().bold(),
+            style(format!("{} dependencies:", result.len()))
+                .green()
+                .bold(),
             style(
                 result
                     .iter()
@@ -502,7 +495,9 @@ fn is_ide_available(cmd: &str) -> bool {
             }
             #[cfg(target_os = "windows")]
             {
-                if dir.join(format!("{}.exe", cmd)).is_file() || dir.join(format!("{}.cmd", cmd)).is_file() {
+                if dir.join(format!("{}.exe", cmd)).is_file()
+                    || dir.join(format!("{}.cmd", cmd)).is_file()
+                {
                     return true;
                 }
             }
@@ -516,8 +511,14 @@ fn is_ide_available(cmd: &str) -> bool {
             let paths = [
                 "/Applications/IntelliJ IDEA.app".to_string(),
                 "/Applications/IntelliJ IDEA CE.app".to_string(),
-                format!("{}/Applications/JetBrains Toolbox/IntelliJ IDEA Ultimate.app", home),
-                format!("{}/Applications/JetBrains Toolbox/IntelliJ IDEA Community Edition.app", home),
+                format!(
+                    "{}/Applications/JetBrains Toolbox/IntelliJ IDEA Ultimate.app",
+                    home
+                ),
+                format!(
+                    "{}/Applications/JetBrains Toolbox/IntelliJ IDEA Community Edition.app",
+                    home
+                ),
             ];
             for p in &paths {
                 if std::path::Path::new(p).exists() {
@@ -546,7 +547,9 @@ fn is_ide_available(cmd: &str) -> bool {
                 .arg("kMDItemCFBundleIdentifier == 'com.microsoft.VSCode'")
                 .output()
             {
-                if !output.stdout.is_empty() && output.stdout.iter().any(|&b| !b.is_ascii_whitespace()) {
+                if !output.stdout.is_empty()
+                    && output.stdout.iter().any(|&b| !b.is_ascii_whitespace())
+                {
                     return true;
                 }
             }
