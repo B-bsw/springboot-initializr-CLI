@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 
-REPO="B-bsw/springboot-initalizr-CLI"
+REPO="B-bsw/springboot-initializr-CLI"
 BIN_NAME="spring-init"
 
 echo "Installing $BIN_NAME..."
@@ -33,7 +33,7 @@ TARGET="${ARCH}-${OS}"
 # Fetch latest release data
 LATEST_RELEASE_URL="https://api.github.com/repos/$REPO/releases/latest"
 echo "Fetching latest release information..."
-LATEST_VERSION=$(curl -s "$LATEST_RELEASE_URL" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+LATEST_VERSION=$(curl -sL "$LATEST_RELEASE_URL" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
 
 if [ -z "$LATEST_VERSION" ]; then
     echo "Error: Could not determine latest release version. Make sure you have created a release on GitHub."
