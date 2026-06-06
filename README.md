@@ -8,12 +8,12 @@ Built in **Rust** for speed. Zero runtime dependencies.
 
 **Via Curl (Recommended):**
 ```bash
-curl -sSL https://raw.githubusercontent.com/B-bsw/springboot-initalizr-CLI/main/install.sh | bash
+curl -sSL https://raw.githubusercontent.com/B-bsw/springboot-initializr-CLI/main/install.sh | bash
 ```
 
 **Via Cargo:**
 ```bash
-git clone https://github.com/B-bsw/springboot-initalizr-CLI.git
+git clone https://github.com/B-bsw/springboot-initializr-CLI.git
 cd springboot-initalizr-CLI
 cargo install --path .
 ```
@@ -95,7 +95,7 @@ spring-init list config    # properties/yaml
 ## Build from source
 
 ```bash
-cd springboot-initalizr-CLI
+cd springboot-initializr-CLI
 cargo build --release
-# Binary at: springboot-initalizr-CLI/target/release/spring-init
+# Binary at: springboot-initializr-CLI/target/release/spring-init
 ```
