@@ -4,6 +4,7 @@ mod interactive;
 mod version;
 mod deps;
 mod update;
+mod upgrade;
 
 use clap::{Parser, Subcommand};
 
@@ -32,8 +33,10 @@ enum Commands {
     /// Remove/uninstall dependencies from an existing project
     #[command(alias = "uninstall")]
     Remove(deps::RemoveArgs),
-    /// Update springx CLI to the latest version
+    /// Update project dependencies to their latest Spring Initializr snippets
     Update(update::UpdateArgs),
+    /// Upgrade the springx CLI itself to the latest version
+    Upgrade(upgrade::UpgradeArgs),
 }
 
 #[tokio::main]
@@ -52,6 +55,7 @@ async fn main() {
         Some(Commands::Add(args)) => deps::run_add(args).await,
         Some(Commands::Remove(args)) => deps::run_remove(args).await,
         Some(Commands::Update(args)) => update::run_update(args).await,
+        Some(Commands::Upgrade(args)) => upgrade::run_upgrade(args).await,
         None => {
             use clap::CommandFactory;
             let mut cmd = Cli::command();

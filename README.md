@@ -74,14 +74,17 @@ springx add web                       # add spring-boot-starter-web
 springx add web,data-jpa,lombok       # add multiple dependencies (comma-separated)
 springx add web data-jpa              # add multiple dependencies (space-separated)
 
+springx update                        # update all existing dependencies to the latest initializr snippets
+springx update web                    # update only the web dependency
+
 springx remove web                    # remove web dependency
 springx remove web,data-jpa           # remove multiple dependencies
 ```
 
-### Self-update
+### Self-upgrade
 
 ```bash
-springx update         # update springx CLI to the latest version
+springx upgrade                       # upgrade the springx CLI itself to the latest version
 ```
 
 ## Flags reference
