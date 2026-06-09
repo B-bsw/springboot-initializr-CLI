@@ -76,9 +76,13 @@ springx list config    # properties/yaml
 ### Dependency management (for existing projects)
 
 ```bash
-springx add            # open interactive menu to add dependencies
-springx add web        # add spring-boot-starter-web
-springx remove web     # remove web dependency
+springx add                           # open interactive menu to add dependencies
+springx add web                       # add spring-boot-starter-web
+springx add web,data-jpa,lombok       # add multiple dependencies (comma-separated)
+springx add web data-jpa              # add multiple dependencies (space-separated)
+
+springx remove web                    # remove web dependency
+springx remove web,data-jpa           # remove multiple dependencies
 ```
 
 ### Self-update

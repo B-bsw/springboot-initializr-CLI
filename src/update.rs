@@ -4,6 +4,7 @@ use console::style;
 
 #[derive(clap::Parser, Debug)]
 pub struct UpdateArgs {
+    #[arg(value_delimiter = ',')]
     pub deps: Vec<String>,
 }
 

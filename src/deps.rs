@@ -6,11 +6,13 @@ use console::style;
 
 #[derive(clap::Parser, Debug)]
 pub struct AddArgs {
+    #[arg(value_delimiter = ',')]
     pub deps: Vec<String>,
 }
 
 #[derive(clap::Parser, Debug)]
 pub struct RemoveArgs {
+    #[arg(value_delimiter = ',')]
     pub deps: Vec<String>,
 }
 
