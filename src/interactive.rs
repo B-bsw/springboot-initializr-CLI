@@ -115,7 +115,7 @@ pub async fn run_interactive() -> Result<(), String> {
         style("Select dependencies (space to toggle, enter to confirm)").dim()
     );
 
-    let selected_deps = select_dependencies(&theme, &meta, &boot.key)?;
+    let selected_deps = select_dependencies(&theme, &meta, &boot.key, &[])?;
 
     // ── Output directory ───────────────────────────────────────────────
     println!();
@@ -239,10 +239,11 @@ fn build_pages(meta: &metadata::Metadata) -> Vec<DepPage> {
     pages
 }
 
-fn select_dependencies(
+pub fn select_dependencies(
     _theme: &ColorfulTheme,
     meta: &metadata::Metadata,
     boot_version: &str,
+    pre_selected: &[String],
 ) -> Result<Vec<DepOption>, String> {
     use crate::version::is_boot_version_in_range;
     let pages = build_pages(meta);
@@ -253,7 +254,7 @@ fn select_dependencies(
     let term = console::Term::stderr();
     term.hide_cursor().ok();
 
-    let mut selected_keys: std::collections::HashSet<String> = std::collections::HashSet::new();
+    let mut selected_keys: std::collections::HashSet<String> = pre_selected.iter().cloned().collect();
     let mut page_idx: usize = 0;
     let mut cursor: usize = 0;
     let total_pages = pages.len();

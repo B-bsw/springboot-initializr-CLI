@@ -415,114 +415,23 @@ fn fallback() -> Metadata {
 use clap::Args;
 
 #[derive(Args)]
-pub struct ListArgs {
-    /// What to list: projects, languages, boot, java, packaging, config, deps
-    #[arg(default_value = "all")]
-    pub what: String,
-}
+pub struct ListArgs {}
 
-pub async fn list(args: ListArgs) -> Result<(), String> {
+pub async fn list() -> Result<(), String> {
     let meta = fetch_metadata().await?;
-    let what = args.what.to_lowercase();
 
-    match what.as_str() {
-        "projects" | "project" | "type" => {
-            println!("\x1b[1;32m🍃 Project Types\x1b[0m");
-            for o in &meta.projects {
-                println!("  \x1b[36m{:<20}\x1b[0m {}", o.key, o.text);
+    println!("\n  \x1b[1;32m🍃 Dependencies ({} total)\x1b[0m", meta.all_deps.len());
+    for group in &meta.dependency_groups {
+        println!("\n  \x1b[1;33m── {} ──\x1b[0m", group.name);
+        for dep in &group.deps {
+            if dep.description.is_empty() {
+                println!("    \x1b[36m{:<25}\x1b[0m {}", dep.key, dep.text);
+            } else {
+                println!(
+                    "    \x1b[36m{:<25}\x1b[0m {} \x1b[2m({})\x1b[0m",
+                    dep.key, dep.text, dep.description
+                );
             }
-        }
-        "languages" | "language" | "lang" => {
-            println!("\x1b[1;32m🍃 Languages\x1b[0m");
-            for o in &meta.languages {
-                println!("  \x1b[36m{:<20}\x1b[0m {}", o.key, o.text);
-            }
-        }
-        "boot" | "versions" | "version" => {
-            println!("\x1b[1;32m🍃 Spring Boot Versions\x1b[0m");
-            for o in &meta.boot_versions {
-                println!("  \x1b[36m{:<20}\x1b[0m {}", o.key, o.text);
-            }
-        }
-        "java" => {
-            println!("\x1b[1;32m🍃 Java Versions\x1b[0m");
-            for o in &meta.java_versions {
-                println!("  \x1b[36m{:<20}\x1b[0m {}", o.key, o.text);
-            }
-        }
-        "packaging" | "pkg" => {
-            println!("\x1b[1;32m🍃 Packaging\x1b[0m");
-            for o in &meta.packagings {
-                println!("  \x1b[36m{:<20}\x1b[0m {}", o.key, o.text);
-            }
-        }
-        "config" | "format" => {
-            println!("\x1b[1;32m🍃 Configuration File Formats\x1b[0m");
-            for o in &meta.config_formats {
-                println!("  \x1b[36m{:<20}\x1b[0m {}", o.key, o.text);
-            }
-        }
-        "deps" | "dependencies" | "dep" => {
-            println!("\x1b[1;32m🍃 Dependencies\x1b[0m");
-            for group in &meta.dependency_groups {
-                println!("\n  \x1b[1;33m── {} ──\x1b[0m", group.name);
-                for dep in &group.deps {
-                    if dep.description.is_empty() {
-                        println!("    \x1b[36m{:<25}\x1b[0m {}", dep.key, dep.text);
-                    } else {
-                        println!(
-                            "    \x1b[36m{:<25}\x1b[0m {} \x1b[2m({})\x1b[0m",
-                            dep.key, dep.text, dep.description
-                        );
-                    }
-                }
-            }
-        }
-        "all" => {
-            println!("\x1b[1;32m🍃 Spring Initializr — Available Options\x1b[0m\n");
-
-            println!("  \x1b[1;33m── Project Types ──\x1b[0m");
-            for o in &meta.projects {
-                println!("    \x1b[36m{:<20}\x1b[0m {}", o.key, o.text);
-            }
-
-            println!("\n  \x1b[1;33m── Languages ──\x1b[0m");
-            for o in &meta.languages {
-                println!("    \x1b[36m{:<20}\x1b[0m {}", o.key, o.text);
-            }
-
-            println!("\n  \x1b[1;33m── Spring Boot Versions ──\x1b[0m");
-            for o in &meta.boot_versions {
-                println!("    \x1b[36m{:<20}\x1b[0m {}", o.key, o.text);
-            }
-
-            println!("\n  \x1b[1;33m── Java Versions ──\x1b[0m");
-            for o in &meta.java_versions {
-                println!("    \x1b[36m{:<20}\x1b[0m {}", o.key, o.text);
-            }
-
-            println!("\n  \x1b[1;33m── Packaging ──\x1b[0m");
-            for o in &meta.packagings {
-                println!("    \x1b[36m{:<20}\x1b[0m {}", o.key, o.text);
-            }
-
-            println!("\n  \x1b[1;33m── Config Formats ──\x1b[0m");
-            for o in &meta.config_formats {
-                println!("    \x1b[36m{:<20}\x1b[0m {}", o.key, o.text);
-            }
-
-            println!("\n  \x1b[1;33m── Dependencies ({} total) ──\x1b[0m", meta.all_deps.len());
-            for group in &meta.dependency_groups {
-                println!("\n    \x1b[35m[{}]\x1b[0m", group.name);
-                for dep in &group.deps {
-                    println!("      \x1b[36m{:<25}\x1b[0m {}", dep.key, dep.text);
-                }
-            }
-        }
-        other => {
-            return Err(format!(
-                "Unknown list target: '{other}'. Try: projects, languages, boot, java, packaging, config, deps, all"
-            ));
         }
     }
 

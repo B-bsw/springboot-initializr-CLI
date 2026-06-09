@@ -2,6 +2,8 @@ mod metadata;
 mod generate;
 mod interactive;
 mod version;
+mod deps;
+mod update;
 
 use clap::{Parser, Subcommand};
 
@@ -20,9 +22,18 @@ struct Cli {
 #[derive(Subcommand)]
 enum Commands {
     /// Generate a new Spring Boot project (interactive wizard)
-    New(generate::NewArgs),
+    #[command(alias = "new")]
+    Init(generate::NewArgs),
     /// List available options (boot versions, dependencies, etc.)
     List(metadata::ListArgs),
+    /// Add/install dependencies to an existing project
+    #[command(alias = "install")]
+    Add(deps::AddArgs),
+    /// Remove/uninstall dependencies from an existing project
+    #[command(alias = "uninstall")]
+    Remove(deps::RemoveArgs),
+    /// Update springx CLI to the latest version
+    Update(update::UpdateArgs),
 }
 
 #[tokio::main]
@@ -30,9 +41,23 @@ async fn main() {
     let cli = Cli::parse();
 
     let result = match cli.command {
-        Some(Commands::New(args)) => generate::run(args).await,
-        Some(Commands::List(args)) => metadata::list(args).await,
-        None => interactive::run_interactive().await,
+        Some(Commands::Init(args)) => {
+            if args.project.is_none() && args.language.is_none() && args.boot.is_none() && args.name.is_none() && args.group.is_none() && args.artifact.is_none() && args.package_name.is_none() && args.packaging.is_none() && args.java.is_none() && args.config_format.is_none() && args.deps.is_empty() && args.output.is_none() && args.ide.is_none() && !args.flat {
+                interactive::run_interactive().await
+            } else {
+                generate::run(args).await
+            }
+        },
+        Some(Commands::List(_args)) => metadata::list().await,
+        Some(Commands::Add(args)) => deps::run_add(args).await,
+        Some(Commands::Remove(args)) => deps::run_remove(args).await,
+        Some(Commands::Update(args)) => update::run_update(args).await,
+        None => {
+            use clap::CommandFactory;
+            let mut cmd = Cli::command();
+            let _ = cmd.print_help();
+            Ok(())
+        }
     };
 
     if let Err(e) = result {

@@ -45,7 +45,7 @@ Walks you through every option with fuzzy-searchable menus.
 ### One-liner generation
 
 ```bash
-springx new \
+springx init \
   --name my-api \
   --group com.mycompany \
   --artifact my-api \
@@ -71,6 +71,20 @@ springx list languages # languages
 springx list projects  # project types
 springx list packaging # jar/war
 springx list config    # properties/yaml
+```
+
+### Dependency management (for existing projects)
+
+```bash
+springx add            # open interactive menu to add dependencies
+springx add web        # add spring-boot-starter-web
+springx remove web     # remove web dependency
+```
+
+### Self-update
+
+```bash
+springx update         # update springx CLI to the latest version
 ```
 
 ## Flags reference
