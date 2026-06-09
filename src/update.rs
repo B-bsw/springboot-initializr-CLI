@@ -34,10 +34,18 @@ pub async fn run_update(args: UpdateArgs) -> Result<(), String> {
         // Filter requested dependencies to only those that actually exist in the project
         let mut filtered = Vec::new();
         for d in args.deps {
-            if existing_deps.contains(&d) {
-                filtered.push(d);
+            let mut resolved = d.clone();
+            if let Some(matched) = meta.all_deps.iter().find(|dep| dep.key == d) {
+                resolved = matched.key.clone();
+            } else if let Some(matched) = meta.all_deps.iter().find(|dep| dep.key.contains(&d)) {
+                println!("  {} Resolving '{}' to '{}'", style("ℹ").cyan(), d, matched.key);
+                resolved = matched.key.clone();
+            }
+            
+            if existing_deps.contains(&resolved) {
+                filtered.push(resolved);
             } else {
-                println!("  {} {} is not installed, skipping.", style("⚠️").yellow(), d);
+                println!("  {} {} is not installed, skipping.", style("⚠️").yellow(), resolved);
             }
         }
         filtered

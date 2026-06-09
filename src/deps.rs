@@ -42,9 +42,56 @@ async fn process_deps(mut input_deps: Vec<String>, _is_add: bool) -> Result<(), 
     if input_deps.is_empty() {
         // Interactive mode
         println!();
-        println!("  {} {}", style("🍃").green(), style("Manage Dependencies").bold().green());
         let theme = ColorfulTheme::default();
         
+        if !_is_add {
+            if existing_deps.is_empty() {
+                println!("  {}", style("No recognized Spring dependencies found to remove.").dim());
+                return Ok(());
+            }
+            
+            let mut installed_deps = Vec::new();
+            for dep_key in &existing_deps {
+                let text = meta.all_deps.iter().find(|d| d.key == *dep_key).map(|d| d.text.clone()).unwrap_or_else(|| dep_key.clone());
+                installed_deps.push(metadata::DepOption {
+                    key: dep_key.clone(),
+                    text,
+                    description: "Select to REMOVE this dependency".to_string(),
+                    group: "Installed".to_string(),
+                    version_range: None,
+                });
+            }
+            
+            let custom_meta = metadata::Metadata {
+                dependency_groups: vec![metadata::DepGroup {
+                    name: "Installed Dependencies".to_string(),
+                    deps: installed_deps.clone(),
+                }],
+                all_deps: installed_deps,
+                projects: vec![],
+                languages: vec![],
+                boot_versions: vec![],
+                java_versions: vec![],
+                packagings: vec![],
+                config_formats: vec![],
+                defaults: meta.defaults.clone(),
+            };
+
+            println!("  {} {}", style("🗑").red(), style("Select dependencies to remove").bold().red());
+            let selected = interactive::select_dependencies(&theme, &custom_meta, &boot_version, &[])?;
+            
+            if selected.is_empty() {
+                println!("  {}", style("No dependencies selected for removal.").dim());
+                return Ok(());
+            }
+
+            let to_remove: Vec<_> = selected.into_iter().map(|d| d.key).collect();
+            
+            apply_changes(&file_path, &content, vec![], to_remove, is_maven, &boot_version).await?;
+            return Ok(());
+        }
+
+        println!("  {} {}", style("🍃").green(), style("Manage Dependencies").bold().green());
         let selected = interactive::select_dependencies(&theme, &meta, &boot_version, &existing_deps)?;
         let selected_keys: std::collections::HashSet<_> = selected.into_iter().map(|d| d.key).collect();
         let existing_set: std::collections::HashSet<_> = existing_deps.into_iter().collect();
@@ -61,11 +108,18 @@ async fn process_deps(mut input_deps: Vec<String>, _is_add: bool) -> Result<(), 
     } else {
         // CLI mode (no interactive prompt)
         // Check if dependencies exist in metadata
+        let mut resolved_deps = Vec::new();
         for d in &input_deps {
-            if !meta.all_deps.iter().any(|dep| dep.key == *d) {
+            if let Some(matched) = meta.all_deps.iter().find(|dep| dep.key == *d) {
+                resolved_deps.push(matched.key.clone());
+            } else if let Some(matched) = meta.all_deps.iter().find(|dep| dep.key.contains(d)) {
+                println!("  {} Resolving '{}' to '{}'", style("ℹ").cyan(), d, matched.key);
+                resolved_deps.push(matched.key.clone());
+            } else {
                 return Err(format!("Unknown dependency ID: {}", d));
             }
         }
+        input_deps = resolved_deps;
         
         // Remove duplicates
         input_deps.sort();
