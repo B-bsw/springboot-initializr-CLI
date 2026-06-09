@@ -81,6 +81,15 @@ springx remove web                    # remove web dependency
 springx remove web,data-jpa           # remove multiple dependencies
 ```
 
+### Project Inspection
+
+```bash
+springx doctor                        # Validate local development environment (Java, Git, Docker, IDEs, etc.)
+springx deps                          # Display dependencies currently installed in the project
+springx search security               # Search for dependencies by name or ID
+springx info security                 # Get detailed information about a dependency
+```
+
 ### Self-upgrade
 
 ```bash
@@ -91,20 +100,24 @@ springx upgrade                       # upgrade the springx CLI itself to the la
 
 | Flag | Short | Description |
 |------|-------|-------------|
-| `--project` | `-t` | Project type (`maven-project`, `gradle-project`) |
-| `--language` | `-l` | Language (`java`, `kotlin`, `groovy`) |
-| `--boot` | `-b` | Spring Boot version |
+| `--type` | `-t` | Project type (maven-project, gradle-project) |
+| `--language` | | Programming language (java, kotlin, groovy) |
+| `--boot` | | Spring Boot version |
 | `--name` | `-n` | Project name |
-| `--group` | `-g` | Group ID |
-| `--artifact` | `-a` | Artifact ID |
-| `--package-name` | | Package name |
-| `--packaging` | `-p` | `jar` or `war` |
-| `--java` | `-j` | Java version |
-| `--config-format` | `-f` | `properties` or `yaml` |
-| `--deps` | `-d` | Comma-separated dependency IDs |
-| `--output` | `-o` | Output directory (default: `.`) |
-| `--ide` | | Open in IDE after generation |
-| `--flat` | | Extract without wrapper folder |
+| `--group` | | Group ID (e.g. `com.example`) |
+| `--artifact` | | Artifact ID |
+| `--package-name` | | Package name (e.g. `com.example.demo`) |
+| `--packaging` | | Packaging (jar, war) |
+| `--java` | | Java version (e.g. 21, 17) |
+| `--format` | `-f` | Configuration file format (properties, yaml) |
+| `--deps` | `-d` | Comma-separated dependencies (`web,data-jpa`) |
+| `--output` | `-o` | Output directory |
+| `--flat` | | Extract directly into output dir (no root folder) |
+| `--ide` | | Open project in IDE after generation (`idea`, `code`) |
+| `--git` | | Initialize a git repository after generation |
+| `--docker` | | Generate multi-stage Dockerfile and docker-compose.yml |
+| `--template` | | Apply a project template (e.g. `clean-architecture`) |
+
 
 ## Build from source
 

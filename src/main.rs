@@ -5,6 +5,14 @@ mod version;
 mod deps;
 mod update;
 mod upgrade;
+mod build_tool;
+mod doctor;
+mod search;
+mod info;
+mod project_deps;
+mod template;
+mod git;
+mod docker;
 
 use clap::{Parser, Subcommand};
 
@@ -37,6 +45,14 @@ enum Commands {
     Update(update::UpdateArgs),
     /// Upgrade the springx CLI itself to the latest version
     Upgrade(upgrade::UpgradeArgs),
+    /// Validate local development environment
+    Doctor(doctor::DoctorArgs),
+    /// Search for dependencies
+    Search(search::SearchArgs),
+    /// Get info about a specific dependency
+    Info(info::InfoArgs),
+    /// Inspect installed dependencies in the current project
+    Deps(project_deps::ProjectDepsArgs),
 }
 
 #[tokio::main]
@@ -45,7 +61,7 @@ async fn main() {
 
     let result = match cli.command {
         Some(Commands::Init(args)) => {
-            if args.project.is_none() && args.language.is_none() && args.boot.is_none() && args.name.is_none() && args.group.is_none() && args.artifact.is_none() && args.package_name.is_none() && args.packaging.is_none() && args.java.is_none() && args.config_format.is_none() && args.deps.is_empty() && args.output.is_none() && args.ide.is_none() && !args.flat {
+            if args.project.is_none() && args.language.is_none() && args.boot.is_none() && args.name.is_none() && args.group.is_none() && args.artifact.is_none() && args.package_name.is_none() && args.packaging.is_none() && args.java.is_none() && args.config_format.is_none() && args.deps.is_empty() && args.output.is_none() && args.ide.is_none() && args.template.is_none() && !args.flat && !args.git && !args.docker {
                 interactive::run_interactive().await
             } else {
                 generate::run(args).await
@@ -56,6 +72,10 @@ async fn main() {
         Some(Commands::Remove(args)) => deps::run_remove(args).await,
         Some(Commands::Update(args)) => update::run_update(args).await,
         Some(Commands::Upgrade(args)) => upgrade::run_upgrade(args).await,
+        Some(Commands::Doctor(args)) => doctor::run_doctor(args).await,
+        Some(Commands::Search(args)) => search::run_search(args).await,
+        Some(Commands::Info(args)) => info::run_info(args).await,
+        Some(Commands::Deps(args)) => project_deps::run_deps(args).await,
         None => {
             use clap::CommandFactory;
             let mut cmd = Cli::command();

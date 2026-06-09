@@ -25,8 +25,9 @@ pub async fn run_remove(args: RemoveArgs) -> Result<(), String> {
 }
 
 async fn process_deps(mut input_deps: Vec<String>, _is_add: bool) -> Result<(), String> {
-    let (file_path, content) = get_build_file()?;
-    let is_maven = file_path.ends_with("pom.xml");
+    let (tool, content) = crate::build_tool::detect_build_tool()?;
+    let file_path = tool.file_name().to_string();
+    let is_maven = tool.is_maven();
 
     let spinner = indicatif::ProgressBar::new_spinner();
     spinner.set_message("Loading metadata...");
@@ -145,17 +146,7 @@ async fn process_deps(mut input_deps: Vec<String>, _is_add: bool) -> Result<(), 
     Ok(())
 }
 
-pub fn get_build_file() -> Result<(String, String), String> {
-    if let Ok(c) = fs::read_to_string("pom.xml") {
-        Ok(("pom.xml".to_string(), c))
-    } else if let Ok(c) = fs::read_to_string("build.gradle") {
-        Ok(("build.gradle".to_string(), c))
-    } else if let Ok(c) = fs::read_to_string("build.gradle.kts") {
-        Ok(("build.gradle.kts".to_string(), c))
-    } else {
-        Err("Could not find pom.xml or build.gradle in the current directory. Are you in a Spring Boot project?".to_string())
-    }
-}
+
 
 pub fn detect_existing_deps(meta: &Metadata, content: &str) -> Vec<String> {
     let mut existing = Vec::new();

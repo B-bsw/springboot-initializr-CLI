@@ -57,6 +57,18 @@ pub struct NewArgs {
     #[arg(short, long)]
     pub output: Option<PathBuf>,
 
+    /// Initialize a git repository after generation
+    #[arg(long)]
+    pub git: bool,
+
+    /// Generate Dockerfile and docker-compose.yml
+    #[arg(long)]
+    pub docker: bool,
+
+    /// Apply a project template (e.g. clean-architecture)
+    #[arg(long)]
+    pub template: Option<String>,
+
     /// Open in IDE after generation (e.g. code, idea)
     #[arg(long)]
     pub ide: Option<String>,
@@ -157,6 +169,22 @@ pub async fn run(args: NewArgs) -> Result<(), String> {
         "\x1b[1;32m✓ Project generated at\x1b[0m {}",
         target.display()
     );
+
+    if let Some(tpl) = &args.template {
+        if let Err(e) = crate::template::apply_template(tpl, &target, &package_name) {
+            println!("  \x1b[33m! {}\x1b[0m", e);
+        }
+    }
+
+    if args.docker {
+        if let Err(e) = crate::docker::add_docker_support(&target, &artifact) {
+            println!("  \x1b[33m! Failed to add Docker support: {}\x1b[0m", e);
+        }
+    }
+
+    if args.git {
+        crate::git::init_git(&target);
+    }
 
     // Open IDE
     if let Some(ide) = &args.ide {

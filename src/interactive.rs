@@ -182,6 +182,9 @@ pub async fn run_interactive() -> Result<(), String> {
         output: Some(output_dir),
         ide,
         flat: false,
+        git: false,
+        docker: false,
+        template: None,
     };
 
     generate::run(args).await

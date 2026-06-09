@@ -11,8 +11,9 @@ pub struct UpdateArgs {
 pub async fn run_update(args: UpdateArgs) -> Result<(), String> {
     println!("\n  {} {}", style("🍃").green(), style("Updating Dependencies...").bold().green());
     
-    let (file_path, content) = deps::get_build_file()?;
-    let is_maven = file_path.ends_with("pom.xml");
+    let (tool, content) = crate::build_tool::detect_build_tool()?;
+    let file_path = tool.file_name().to_string();
+    let is_maven = tool.is_maven();
 
     let spinner = indicatif::ProgressBar::new_spinner();
     spinner.set_message("Loading metadata...");
