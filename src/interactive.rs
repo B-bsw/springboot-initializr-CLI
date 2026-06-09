@@ -164,6 +164,33 @@ pub async fn run_interactive() -> Result<(), String> {
         Some(cmd) => Some(cmd.to_string()),
     };
 
+    // ── Extras (Git, Docker, Template) ─────────────────────────────────
+    let use_git = dialoguer::Confirm::with_theme(&theme)
+        .with_prompt("  Initialize a Git repository?")
+        .default(true)
+        .interact()
+        .unwrap_or(false);
+
+    let use_docker = dialoguer::Confirm::with_theme(&theme)
+        .with_prompt("  Generate Dockerfile and docker-compose.yml?")
+        .default(false)
+        .interact()
+        .unwrap_or(false);
+
+    let template_options = vec!["None", "clean-architecture"];
+    let template_idx = Select::with_theme(&theme)
+        .with_prompt("  Apply a project template?")
+        .items(&template_options)
+        .default(0)
+        .interact()
+        .unwrap_or(0);
+    
+    let template = if template_idx == 0 {
+        None
+    } else {
+        Some(template_options[template_idx].to_string())
+    };
+
     // ── Generate ───────────────────────────────────────────────────────
     let dep_keys: Vec<String> = selected_deps.iter().map(|d| d.key.clone()).collect();
 
@@ -182,9 +209,9 @@ pub async fn run_interactive() -> Result<(), String> {
         output: Some(output_dir),
         ide,
         flat: false,
-        git: false,
-        docker: false,
-        template: None,
+        git: use_git,
+        docker: use_docker,
+        template,
     };
 
     generate::run(args).await
