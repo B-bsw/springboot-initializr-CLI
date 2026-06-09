@@ -2,7 +2,7 @@
 set -e
 
 REPO="B-bsw/springboot-initializr-CLI"
-BIN_NAME="spring-init"
+BIN_NAME="springx"
 
 echo "Installing $BIN_NAME..."
 

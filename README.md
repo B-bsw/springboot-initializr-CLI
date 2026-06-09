@@ -1,4 +1,4 @@
-# 🍃 spring-init CLI
+# 🍃 springx CLI
 
 A fast, native CLI client for [start.spring.io](https://start.spring.io) — generate Spring Boot projects right from your terminal.
 
@@ -18,18 +18,18 @@ cd springboot-initalizr-CLI
 cargo install --path .
 ```
 
-This installs `spring-init` to `~/.cargo/bin/`.
+This installs `springx` to `~/.cargo/bin/`.
 
 ## Uninstall
 
 If you installed via **curl**, you can remove the binary by running:
 ```bash
-rm -f /usr/local/bin/spring-init ~/.local/bin/spring-init
+rm -f /usr/local/bin/springx ~/.local/bin/springx
 ```
 
 If you installed via **cargo**, use:
 ```bash
-cargo uninstall spring-init
+cargo uninstall springx
 ```
 
 ## Usage
@@ -37,7 +37,7 @@ cargo uninstall spring-init
 ### Interactive wizard (default)
 
 ```bash
-spring-init
+springx
 ```
 
 Walks you through every option with fuzzy-searchable menus.
@@ -45,7 +45,7 @@ Walks you through every option with fuzzy-searchable menus.
 ### One-liner generation
 
 ```bash
-spring-init new \
+springx new \
   --name my-api \
   --group com.mycompany \
   --artifact my-api \
@@ -63,14 +63,14 @@ All flags are optional — anything you omit uses the server default.
 ### List available options
 
 ```bash
-spring-init list           # show everything
-spring-init list boot      # boot versions
-spring-init list deps      # all dependencies (grouped)
-spring-init list java      # java versions
-spring-init list languages # languages
-spring-init list projects  # project types
-spring-init list packaging # jar/war
-spring-init list config    # properties/yaml
+springx list           # show everything
+springx list boot      # boot versions
+springx list deps      # all dependencies (grouped)
+springx list java      # java versions
+springx list languages # languages
+springx list projects  # project types
+springx list packaging # jar/war
+springx list config    # properties/yaml
 ```
 
 ## Flags reference
@@ -97,5 +97,5 @@ spring-init list config    # properties/yaml
 ```bash
 cd springboot-initializr-CLI
 cargo build --release
-# Binary at: springboot-initializr-CLI/target/release/spring-init
+# Binary at: springboot-initializr-CLI/target/release/springx
 ```

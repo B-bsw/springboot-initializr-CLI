@@ -17,20 +17,20 @@ jobs:
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            artifact_name: spring-init
-            asset_name: spring-init-x86_64-unknown-linux-gnu
+            artifact_name: springx
+            asset_name: springx-x86_64-unknown-linux-gnu
           - os: ubuntu-latest
             target: aarch64-unknown-linux-gnu
-            artifact_name: spring-init
-            asset_name: spring-init-aarch64-unknown-linux-gnu
+            artifact_name: springx
+            asset_name: springx-aarch64-unknown-linux-gnu
           - os: macos-latest
             target: x86_64-apple-darwin
-            artifact_name: spring-init
-            asset_name: spring-init-x86_64-apple-darwin
+            artifact_name: springx
+            asset_name: springx-x86_64-apple-darwin
           - os: macos-latest
             target: aarch64-apple-darwin
-            artifact_name: spring-init
-            asset_name: spring-init-aarch64-apple-darwin
+            artifact_name: springx
+            asset_name: springx-aarch64-apple-darwin
 
     steps:
       - name: Checkout code

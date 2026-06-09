@@ -7,7 +7,7 @@ use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
 #[command(
-    name = "spring-init",
+    name = "springx",
     version,
     about = "🍃 Spring Initializr CLI — generate Spring Boot projects from the terminal",
     long_about = "A fast CLI client for start.spring.io.\nGenerate Spring Boot projects interactively or via flags, right from your terminal."
