@@ -424,14 +424,7 @@ pub async fn list() -> Result<(), String> {
     for group in &meta.dependency_groups {
         println!("\n  \x1b[1;33m── {} ──\x1b[0m", group.name);
         for dep in &group.deps {
-            if dep.description.is_empty() {
-                println!("    \x1b[36m{:<25}\x1b[0m {}", dep.key, dep.text);
-            } else {
-                println!(
-                    "    \x1b[36m{:<25}\x1b[0m {} \x1b[2m({})\x1b[0m",
-                    dep.key, dep.text, dep.description
-                );
-            }
+            println!("    \x1b[2m▪\x1b[0m \x1b[36m{:<28}\x1b[0m {}", dep.key, dep.text);
         }
     }
 

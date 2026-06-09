@@ -63,14 +63,7 @@ All flags are optional — anything you omit uses the server default.
 ### List available options
 
 ```bash
-springx list           # show everything
-springx list boot      # boot versions
-springx list deps      # all dependencies (grouped)
-springx list java      # java versions
-springx list languages # languages
-springx list projects  # project types
-springx list packaging # jar/war
-springx list config    # properties/yaml
+springx list           # List all available dependencies in a clean, readable format
 ```
 
 ### Dependency management (for existing projects)
