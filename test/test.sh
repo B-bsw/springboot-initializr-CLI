@@ -46,8 +46,18 @@ rm -rf $TEST_DIR
 mkdir $TEST_DIR
 cd $TEST_DIR
 
-# Use curl to download a fresh spring boot project
-curl -s https://start.spring.io/starter.zip -d type=gradle-project -d bootVersion=$BOOT_VERSION -d javaVersion=17 -o starter.zip
+# The API fails if we pass the suffix (like .RELEASE or .BUILD-SNAPSHOT), so we strip it.
+STRIPPED_VERSION=$(echo "$BOOT_VERSION" | grep -oE '^[0-9]+\.[0-9]+\.[0-9]+')
+if [ -z "$STRIPPED_VERSION" ]; then
+    STRIPPED_VERSION="$BOOT_VERSION"
+fi
+
+# Use curl to download a fresh spring boot project. Added -f to fail on HTTP errors.
+if ! curl -f -s https://start.spring.io/starter.zip -d type=gradle-project -d bootVersion=$STRIPPED_VERSION -d javaVersion=17 -o starter.zip; then
+    echo -e "${RED}✖ Failed to download Spring Boot project for version $BOOT_VERSION ($STRIPPED_VERSION)${NC}"
+    exit 1
+fi
+
 unzip -q starter.zip
 rm starter.zip
 
