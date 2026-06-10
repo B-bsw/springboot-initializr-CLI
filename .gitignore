@@ -4,5 +4,5 @@
 # os
 .DS_Store
 
-# tests
-/tests
+# agent
+.agent

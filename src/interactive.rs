@@ -115,7 +115,13 @@ pub async fn run_interactive() -> Result<(), String> {
         style("Select dependencies (space to toggle, enter to confirm)").dim()
     );
 
-    let selected_deps = select_dependencies(&theme, &meta, &boot.key, &[])?;
+    let selected_deps = select_dependencies(
+        &theme,
+        &meta,
+        &boot.key,
+        &[],
+        true,
+    )?;
 
     // ── Output directory ───────────────────────────────────────────────
     println!();
@@ -245,14 +251,23 @@ struct DepPage {
     deps: Vec<DepOption>,
 }
 
-fn build_pages(meta: &metadata::Metadata) -> Vec<DepPage> {
+fn build_pages(meta: &metadata::Metadata, is_add: bool, existing_deps: &[String]) -> Vec<DepPage> {
     let mut pages: Vec<DepPage> = Vec::new();
     for group in &meta.dependency_groups {
-        if group.deps.is_empty() {
+        let filtered_deps: Vec<DepOption> = group.deps.iter().filter(|d| {
+            let is_installed = existing_deps.contains(&d.key);
+            if is_add {
+                !is_installed // If adding, only show NOT installed
+            } else {
+                is_installed  // If removing, only show installed
+            }
+        }).cloned().collect();
+
+        if filtered_deps.is_empty() {
             continue;
         }
 
-        let chunks: Vec<&[DepOption]> = group.deps.chunks(PAGE_SIZE).collect();
+        let chunks: Vec<&[DepOption]> = filtered_deps.chunks(PAGE_SIZE).collect();
         let total_chunks = chunks.len();
         for (i, chunk) in chunks.iter().enumerate() {
             let title = if total_chunks == 1 {
@@ -273,10 +288,11 @@ pub fn select_dependencies(
     _theme: &ColorfulTheme,
     meta: &metadata::Metadata,
     boot_version: &str,
-    pre_selected: &[String],
+    existing_deps: &[String],
+    is_add: bool,
 ) -> Result<Vec<DepOption>, String> {
     use crate::version::is_boot_version_in_range;
-    let pages = build_pages(meta);
+    let pages = build_pages(meta, is_add, existing_deps);
     if pages.is_empty() {
         return Ok(Vec::new());
     }
@@ -284,7 +300,8 @@ pub fn select_dependencies(
     let term = console::Term::stderr();
     term.hide_cursor().ok();
 
-    let mut selected_keys: std::collections::HashSet<String> = pre_selected.iter().cloned().collect();
+    // Start with empty selection, user will select from the filtered list
+    let mut selected_keys: std::collections::HashSet<String> = std::collections::HashSet::new();
     let mut page_idx: usize = 0;
     let mut cursor: usize = 0;
     let total_pages = pages.len();
