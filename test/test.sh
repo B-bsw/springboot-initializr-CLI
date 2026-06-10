@@ -12,14 +12,42 @@ echo -e "${GREEN}=== SpringX CLI Comprehensive Test Suite ===${NC}"
 echo -e "\n${GREEN}[1/5] Building and installing springx CLI...${NC}"
 cargo install --path .. > /dev/null 2>&1
 
-echo -e "\n${GREEN}[2/5] Creating fresh Spring Boot project sandbox...${NC}"
+if [ -n "$1" ]; then
+    BOOT_VERSION=$1
+else
+    echo -e "\n${GREEN}Fetching available Spring Boot versions...${NC}"
+    VERSIONS=$(curl -s -H 'Accept: application/json' https://start.spring.io/ | jq -r '.bootVersion.values[].id')
+    
+    echo "Please choose a Spring Boot version for the test:"
+    i=1
+    declare -a VERSION_ARRAY
+    for v in $VERSIONS; do
+        echo "  $i) $v"
+        VERSION_ARRAY[$i]=$v
+        i=$((i+1))
+    done
+    
+    echo -n "Select a number (1-$((i-1))) [default 4.0.6]: "
+    read -r selection
+    
+    if [[ -z "$selection" ]]; then
+        BOOT_VERSION="4.0.6"
+    elif [[ "$selection" -ge 1 ]] 2>/dev/null && [[ "$selection" -lt "$i" ]] 2>/dev/null; then
+        BOOT_VERSION="${VERSION_ARRAY[$selection]}"
+    else
+        echo -e "${RED}Invalid selection. Defaulting to 4.0.6${NC}"
+        BOOT_VERSION="4.0.6"
+    fi
+fi
+
+echo -e "\n${GREEN}[2/5] Creating fresh Spring Boot $BOOT_VERSION project sandbox...${NC}"
 TEST_DIR="sandbox"
 rm -rf $TEST_DIR
 mkdir $TEST_DIR
 cd $TEST_DIR
 
 # Use curl to download a fresh spring boot project
-curl -s https://start.spring.io/starter.zip -d type=gradle-project -d bootVersion=4.0.6 -d javaVersion=17 -o starter.zip
+curl -s https://start.spring.io/starter.zip -d type=gradle-project -d bootVersion=$BOOT_VERSION -d javaVersion=17 -o starter.zip
 unzip -q starter.zip
 rm starter.zip
 
