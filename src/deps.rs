@@ -152,13 +152,43 @@ pub fn detect_existing_deps(meta: &Metadata, content: &str) -> Vec<String> {
     let mut existing = Vec::new();
     for dep in &meta.all_deps {
         let key = &dep.key;
-        let s1 = format!("starter-{}", key);
-        let s2 = format!(">{}<", key);
-        let s3 = format!(":{}", key);
-        let s4 = format!("'{}'", key);
-        let s5 = format!("\"{}\"", key);
-        // This heuristic handles most cases
-        if content.contains(&s1) || content.contains(&s2) || content.contains(&s3) || content.contains(&s4) || content.contains(&s5) {
+        let mut matched = false;
+
+        let keys_to_try = if key.starts_with("spring-") {
+            vec![key.clone(), key.replace("spring-", "")]
+        } else {
+            vec![key.clone()]
+        };
+
+        for k in &keys_to_try {
+            let k_no_hyphen = k.replace("-", "");
+            let delimiters = ['\'', '"', '<', '\n', ' ', '\r', ':'];
+
+            for delim in delimiters {
+                let s1 = format!("starter-{}{}", k, delim);
+                let s2 = format!(":{}{}", k, delim);
+                let s3 = format!(">spring-boot-{}{}", k, delim);
+                let s4 = format!(":spring-boot-{}{}", k, delim);
+                let s5 = format!(">{}{}", k, delim);
+                let s6 = format!("'{}'", k);
+                let s7 = format!("\"{}\"", k);
+                let s8 = format!("starter-{}{}", k_no_hyphen, delim);
+                let s9 = format!(">spring-boot-{}{}", k_no_hyphen, delim);
+                let s10 = format!(":spring-boot-{}{}", k_no_hyphen, delim);
+                let s11 = format!(":{}{}", k_no_hyphen, delim);
+
+                if content.contains(&s1) || content.contains(&s2) || content.contains(&s3)
+                    || content.contains(&s4) || content.contains(&s5) || content.contains(&s6)
+                    || content.contains(&s7) || content.contains(&s8) || content.contains(&s9)
+                    || content.contains(&s10) || content.contains(&s11) {
+                    matched = true;
+                    break;
+                }
+            }
+            if matched { break; }
+        }
+
+        if matched {
             existing.push(key.clone());
         }
     }
@@ -187,26 +217,88 @@ pub async fn apply_changes(file_path: &str, original_content: &str, to_add: Vec<
     if !to_remove.is_empty() {
         for dep in &to_remove {
             println!("  {} {}", style("-").red(), style(dep).bold());
+            
+            let keys_to_try = if dep.starts_with("spring-") {
+                vec![dep.clone(), dep.replace("spring-", "")]
+            } else {
+                vec![dep.clone()]
+            };
+
             if is_maven {
-                // simple greedy remove for maven
-                let search = format!("<artifactId>spring-boot-starter-{}</artifactId>", dep);
-                if let Some(idx) = new_content.find(&search).or_else(|| new_content.find(&format!("<artifactId>{}</artifactId>", dep))) {
-                    if let Some(start) = new_content[..idx].rfind("<dependency>") {
-                        if let Some(end) = new_content[idx..].find("</dependency>") {
-                            new_content.replace_range(start..idx + end + 13, "");
-                            changed = true;
+                let mut maven_searches = Vec::new();
+                for k in &keys_to_try {
+                    let k_no_hyphen = k.replace("-", "");
+                    maven_searches.push(format!("<artifactId>spring-boot-starter-{}</artifactId>", k));
+                    maven_searches.push(format!("<artifactId>spring-boot-starter-{}</artifactId>", k_no_hyphen));
+                    maven_searches.push(format!("<artifactId>spring-boot-{}</artifactId>", k));
+                    maven_searches.push(format!("<artifactId>spring-boot-{}</artifactId>", k_no_hyphen));
+                    maven_searches.push(format!("<artifactId>{}</artifactId>", k));
+                }
+
+                let mut current_idx = 0;
+                while current_idx < new_content.len() {
+                    let mut found_idx = None;
+                    for search in &maven_searches {
+                        if let Some(rel_idx) = new_content[current_idx..].find(search) {
+                            found_idx = Some(current_idx + rel_idx);
+                            break;
                         }
+                    }
+
+                    if let Some(idx) = found_idx {
+                        if let Some(start) = new_content[..idx].rfind("<dependency>") {
+                            if let Some(end) = new_content[idx..].find("</dependency>") {
+                                new_content.replace_range(start..idx + end + 13, "");
+                                changed = true;
+                                current_idx = start;
+                                continue;
+                            }
+                        }
+                        current_idx = idx + 1;
+                    } else {
+                        break;
                     }
                 }
             } else {
-                // simple remove for gradle
-                let search = format!("spring-boot-starter-{}", dep);
-                if let Some(idx) = new_content.find(&search).or_else(|| new_content.find(dep)) {
-                    if let Some(line_start) = new_content[..idx].rfind('\n') {
-                        if let Some(line_end) = new_content[idx..].find('\n') {
-                            new_content.replace_range(line_start..idx + line_end, "");
-                            changed = true;
+                let mut gradle_searches = Vec::new();
+                for k in &keys_to_try {
+                    let k_no_hyphen = k.replace("-", "");
+                    let delimiters = ['\'', '"', '\n', ' '];
+                    for delim in delimiters {
+                        gradle_searches.push(format!("spring-boot-starter-{}{}", k, delim));
+                        gradle_searches.push(format!("spring-boot-starter-{}{}", k_no_hyphen, delim));
+                        gradle_searches.push(format!("spring-boot-{}{}", k, delim));
+                        gradle_searches.push(format!(":{}{}", k, delim));
+                        
+                        gradle_searches.push(format!("spring-boot-starter-{}-test{}", k, delim));
+                        gradle_searches.push(format!("spring-boot-starter-{}-test{}", k_no_hyphen, delim));
+                        gradle_searches.push(format!("spring-boot-{}-test{}", k, delim));
+                        gradle_searches.push(format!(":{}-test{}", k, delim));
+                    }
+                }
+
+                let mut current_idx = 0;
+                while current_idx < new_content.len() {
+                    let mut found_idx = None;
+                    for search in &gradle_searches {
+                        if let Some(rel_idx) = new_content[current_idx..].find(search) {
+                            found_idx = Some(current_idx + rel_idx);
+                            break;
                         }
+                    }
+
+                    if let Some(idx) = found_idx {
+                        if let Some(line_start) = new_content[..idx].rfind('\n') {
+                            if let Some(line_end) = new_content[idx..].find('\n') {
+                                new_content.replace_range(line_start..idx + line_end, "");
+                                changed = true;
+                                current_idx = line_start;
+                                continue;
+                            }
+                        }
+                        current_idx = idx + 1;
+                    } else {
+                        break;
                     }
                 }
             }
