@@ -59,7 +59,7 @@ pub async fn run_update(args: UpdateArgs) -> Result<(), String> {
 
     // Call apply_changes with the same list for remove and add!
     // This will delete the old snippets and inject the latest snippets from Spring Initializr.
-    deps::apply_changes(&file_path, &content, to_update.clone(), to_update.clone(), is_maven, "").await?;
+    deps::apply_changes(&file_path, &content, to_update.clone(), to_update.clone(), is_maven, &meta).await?;
 
     Ok(())
 }
