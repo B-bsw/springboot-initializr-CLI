@@ -376,6 +376,134 @@ pub async fn apply_changes(file_path: &str, original_content: &str, to_add: Vec<
                 }
             }
         }
+        
+        // --- ADVANCED BOM & TRANSITIVE DEPENDENCY REMOVAL LOGIC ---
+        let joined_remove = to_remove.join(",");
+        let remove_url = if is_maven {
+            format!("https://start.spring.io/pom.xml?dependencies={}&bootVersion={}", joined_remove, boot_version)
+        } else {
+            format!("https://start.spring.io/build.gradle?dependencies={}&bootVersion={}", joined_remove, boot_version)
+        };
+        
+        if let Ok(resp) = reqwest::get(&remove_url).await {
+            if let Ok(downloaded_text) = resp.text().await {
+                if is_maven {
+                    // Extract properties to remove
+                    if let Some(prop_start) = downloaded_text.find("<properties>") {
+                        if let Some(prop_end) = downloaded_text[prop_start..].find("</properties>") {
+                            let prop_block = &downloaded_text[prop_start+12..prop_start + prop_end];
+                            for line in prop_block.lines() {
+                                let line_t = line.trim();
+                                if !line_t.is_empty() && !line_t.contains("<java.version>") {
+                                    if let Some(idx) = new_content.find(line_t) {
+                                        if let Some(start) = new_content[..idx].rfind('\n') {
+                                            if let Some(end) = new_content[idx..].find('\n') {
+                                                new_content.replace_range(start..idx + end, "");
+                                                changed = true;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Extract BOM artifacts and normal dependencies to remove
+                    let mut current_idx = 0;
+                    while let Some(d_start) = downloaded_text[current_idx..].find("<dependency>") {
+                        if let Some(d_end) = downloaded_text[current_idx + d_start..].find("</dependency>") {
+                            let block = &downloaded_text[current_idx + d_start .. current_idx + d_start + d_end + 13];
+                            if let Some(a_start) = block.find("<artifactId>") {
+                                if let Some(a_end) = block[a_start..].find("</artifactId>") {
+                                    let a_id = &block[a_start + 12..a_start + a_end];
+                                    if a_id != "spring-boot-starter" && a_id != "spring-boot-starter-test" && a_id != "junit-platform-launcher" {
+                                        artifacts_to_remove.insert(a_id.to_string());
+                                    }
+                                }
+                            }
+                            current_idx = current_idx + d_start + d_end + 13;
+                        } else {
+                            break;
+                        }
+                    }
+                } else {
+                    // Gradle ext
+                    if let Some(ext_start) = downloaded_text.find("ext {") {
+                        if let Some(ext_end) = downloaded_text[ext_start..].find("}") {
+                            let ext_block = &downloaded_text[ext_start..ext_start + ext_end];
+                            for line in ext_block.lines() {
+                                let line_t = line.trim();
+                                if line_t.starts_with("set(") {
+                                    if let Some(idx) = new_content.find(line_t) {
+                                        if let Some(start) = new_content[..idx].rfind('\n') {
+                                            if let Some(end) = new_content[idx..].find('\n') {
+                                                new_content.replace_range(start..idx + end, "");
+                                                changed = true;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Gradle BOM
+                    for line in downloaded_text.lines() {
+                        let line_t = line.trim();
+                        if line_t.starts_with("mavenBom ") {
+                            if let Some(idx) = new_content.find(line_t) {
+                                if let Some(start) = new_content[..idx].rfind('\n') {
+                                    if let Some(end) = new_content[idx..].find('\n') {
+                                        new_content.replace_range(start..idx + end, "");
+                                        changed = true;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Gradle transitive dependencies
+                    if let Some(start) = downloaded_text.find("dependencies {") {
+                        if let Some(end) = downloaded_text[start..].find("}") {
+                            let deps_block = &downloaded_text[start..start + end];
+                            for line in deps_block.lines() {
+                                let line_t = line.trim();
+                                if line_t.starts_with("implementation") || line_t.starts_with("compileOnly") || line_t.starts_with("testImplementation") || line_t.starts_with("testRuntimeOnly") {
+                                    let mut in_quote = false;
+                                    let mut current_str = String::new();
+                                    for c in line_t.chars() {
+                                        if c == '\'' || c == '"' {
+                                            if in_quote {
+                                                if current_str.contains(":") {
+                                                    let parts: Vec<&str> = current_str.split(':').collect();
+                                                    if parts.len() >= 2 {
+                                                        let a_id = parts[1].to_string();
+                                                        if a_id != "spring-boot-starter" && a_id != "spring-boot-starter-test" && a_id != "junit-platform-launcher" {
+                                                            artifacts_to_remove.insert(a_id);
+                                                        }
+                                                    }
+                                                }
+                                                break;
+                                            } else {
+                                                in_quote = true;
+                                            }
+                                        } else if in_quote {
+                                            current_str.push(c);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Cleanup empty blocks
+        new_content = new_content.replace("ext {\n}\n", "");
+        new_content = new_content.replace("dependencyManagement {\n\timports {\n\t}\n}\n", "");
+        new_content = new_content.replace("    <properties>\n    </properties>\n", "");
+        new_content = new_content.replace("    <dependencyManagement>\n        <dependencies>\n        </dependencies>\n    </dependencyManagement>\n", "");
 
         for dep in &to_remove {
             println!("  {} {}", console::style("-").red(), console::style(dep).bold());
@@ -564,6 +692,143 @@ pub async fn apply_changes(file_path: &str, original_content: &str, to_add: Vec<
                                 new_content.insert_str(insert_pos + brace_end, &format!("{}", lines_to_add));
                                 changed = true;
                             }
+                        }
+                    }
+                }
+
+                // --- BOM & PROPERTIES INJECTION LOGIC ---
+                if is_maven {
+                    if let Some(prop_start) = downloaded_text.find("<properties>") {
+                        if let Some(prop_end) = downloaded_text[prop_start..].find("</properties>") {
+                            let prop_block = &downloaded_text[prop_start+12..prop_start + prop_end];
+                            let mut to_add = String::new();
+                            for line in prop_block.lines() {
+                                let line_t = line.trim();
+                                if !line_t.is_empty() && !line_t.contains("<java.version>") {
+                                    if !new_content.contains(line_t) {
+                                        to_add.push_str("        ");
+                                        to_add.push_str(line_t);
+                                        to_add.push('\n');
+                                    }
+                                }
+                            }
+                            if !to_add.is_empty() {
+                                if let Some(target_prop) = new_content.find("</properties>") {
+                                    new_content.insert_str(target_prop, &format!("{}", to_add));
+                                    changed = true;
+                                } else {
+                                    if let Some(dep_start) = new_content.find("<dependencies>") {
+                                        new_content.insert_str(dep_start, &format!("    <properties>\n{}    </properties>\n\n", to_add));
+                                        changed = true;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if let Some(dm_start) = downloaded_text.find("<dependencyManagement>") {
+                        if let Some(dm_end) = downloaded_text[dm_start..].find("</dependencyManagement>") {
+                            let dm_block = &downloaded_text[dm_start..dm_start + dm_end + 23];
+                            if let Some(deps_start) = dm_block.find("<dependencies>") {
+                                if let Some(deps_end) = dm_block[deps_start..].find("</dependencies>") {
+                                    let inner_deps = &dm_block[deps_start+14..deps_start+deps_end];
+                                    let mut current_idx = 0;
+                                    let mut bom_to_add = String::new();
+                                    while let Some(d_start) = inner_deps[current_idx..].find("<dependency>") {
+                                        if let Some(d_end) = inner_deps[current_idx + d_start..].find("</dependency>") {
+                                            let block = &inner_deps[current_idx + d_start .. current_idx + d_start + d_end + 13];
+                                            let mut found = false;
+                                            if let Some(a_start) = block.find("<artifactId>") {
+                                                if let Some(a_end) = block[a_start..].find("</artifactId>") {
+                                                    let a_id = &block[a_start + 12..a_start + a_end];
+                                                    if new_content.contains(a_id) {
+                                                        found = true;
+                                                    }
+                                                }
+                                            }
+                                            if !found {
+                                                bom_to_add.push_str("            ");
+                                                bom_to_add.push_str(block.trim().replace("\n", "\n            ").as_str());
+                                                bom_to_add.push('\n');
+                                            }
+                                            current_idx = current_idx + d_start + d_end + 13;
+                                        } else {
+                                            break;
+                                        }
+                                    }
+                                    if !bom_to_add.is_empty() {
+                                        if let Some(target_dm) = new_content.find("<dependencyManagement>") {
+                                            if let Some(target_deps) = new_content[target_dm..].find("</dependencies>") {
+                                                new_content.insert_str(target_dm + target_deps, &format!("{}", bom_to_add));
+                                                changed = true;
+                                            }
+                                        } else {
+                                            if let Some(build_start) = new_content.find("<build>") {
+                                                new_content.insert_str(build_start, &format!("    <dependencyManagement>\n        <dependencies>\n{}        </dependencies>\n    </dependencyManagement>\n\n", bom_to_add));
+                                                changed = true;
+                                            } else if let Some(dep_end) = new_content.find("</dependencies>") {
+                                                new_content.insert_str(dep_end + 15, &format!("\n    <dependencyManagement>\n        <dependencies>\n{}        </dependencies>\n    </dependencyManagement>\n", bom_to_add));
+                                                changed = true;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    if let Some(ext_start) = downloaded_text.find("ext {") {
+                        if let Some(ext_end) = downloaded_text[ext_start..].find("}") {
+                            let ext_block = &downloaded_text[ext_start..ext_start + ext_end];
+                            let mut to_add = String::new();
+                            for line in ext_block.lines() {
+                                if line.trim().starts_with("set(") {
+                                    if !new_content.contains(line.trim()) {
+                                        to_add.push_str("\t");
+                                        to_add.push_str(line.trim());
+                                        to_add.push('\n');
+                                    }
+                                }
+                            }
+                            if !to_add.is_empty() {
+                                if let Some(target_ext) = new_content.find("ext {") {
+                                    if let Some(brace_end) = new_content[target_ext..].find('}') {
+                                        new_content.insert_str(target_ext + brace_end, &format!("{}", to_add));
+                                        changed = true;
+                                    }
+                                } else {
+                                    if let Some(dep_start) = new_content.find("dependencies {") {
+                                        new_content.insert_str(dep_start, &format!("ext {{\n{}}}\n\n", to_add));
+                                        changed = true;
+                                    } else {
+                                        new_content.push_str(&format!("\next {{\n{}}}\n", to_add));
+                                        changed = true;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    let mut bom_lines = String::new();
+                    for line in downloaded_text.lines() {
+                        if line.trim().starts_with("mavenBom ") {
+                            if !new_content.contains(line.trim()) {
+                                bom_lines.push_str("\t\t");
+                                bom_lines.push_str(line.trim());
+                                bom_lines.push('\n');
+                            }
+                        }
+                    }
+                    if !bom_lines.is_empty() {
+                        if let Some(target_dm) = new_content.find("dependencyManagement {") {
+                            if let Some(imports_start) = new_content[target_dm..].find("imports {") {
+                                if let Some(imports_end) = new_content[target_dm + imports_start..].find('}') {
+                                    new_content.insert_str(target_dm + imports_start + imports_end, &format!("{}", bom_lines));
+                                    changed = true;
+                                }
+                            }
+                        } else {
+                            new_content.push_str(&format!("\ndependencyManagement {{\n\timports {{\n{}\t}}\n}}\n", bom_lines));
+                            changed = true;
                         }
                     }
                 }
