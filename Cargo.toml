@@ -1,6 +1,6 @@
 [package]
 name = "springx"
-version = "1.5.1"
+version = "1.5.2"
 edition = "2024"
 description = "Spring Initializr CLI — generate Spring Boot projects from the terminal"
 authors = ["bbsw <sorawitthassadorn15@gmail.com>"]
