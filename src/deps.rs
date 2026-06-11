@@ -213,6 +213,8 @@ pub fn detect_existing_deps(meta: &Metadata, content: &str) -> Vec<String> {
     for artifact_id in ids {
         // Manual overrides for dependencies whose artifactIds completely diverge from their Spring Initializr IDs
         match artifact_id.as_str() {
+            "transformation" => { existing.insert("tanzu-scg-transformation".to_string()); continue; },
+            "spring-cloud-starter-gateway-server-webflux" => { existing.insert("cloud-gateway".to_string()); continue; },
             "spring-rabbit-stream" => { existing.insert("amqp-streams".to_string()); continue; },
             "jcc" => { existing.insert("db2".to_string()); continue; },
             "spring-cloud-azure-starter" => { existing.insert("azure-support".to_string()); continue; },
@@ -264,6 +266,46 @@ pub fn detect_existing_deps(meta: &Metadata, content: &str) -> Vec<String> {
 }
 
 pub fn extract_boot_version(content: &str) -> Option<String> {
+    // Gradle Groovy/Kotlin: id 'org.springframework.boot' version '3.5.15' or id("org.springframework.boot") version "3.5.15"
+    if let Some(idx) = content.find("org.springframework.boot") {
+        let rest = &content[idx..];
+        if let Some(version_idx) = rest.find("version") {
+            let ver_str = &rest[version_idx + 7..];
+            let mut in_quote = false;
+            let mut quote_char = ' ';
+            let mut extracted = String::new();
+            for c in ver_str.chars() {
+                if in_quote {
+                    if c == quote_char {
+                        break;
+                    }
+                    extracted.push(c);
+                } else if c == '\'' || c == '"' {
+                    in_quote = true;
+                    quote_char = c;
+                } else if c == '\n' {
+                    break;
+                }
+            }
+            if extracted.starts_with('2') || extracted.starts_with('3') || extracted.starts_with('4') {
+                return Some(extracted.trim().to_string());
+            }
+        }
+    }
+
+    // Maven Parent
+    if let Some(idx) = content.find("<artifactId>spring-boot-starter-parent</artifactId>") {
+        let rest = &content[idx..];
+        if let Some(v_start) = rest.find("<version>") {
+            if let Some(v_end) = rest[v_start..].find("</version>") {
+                let ver = &rest[v_start + 9..v_start + v_end];
+                if ver.starts_with('2') || ver.starts_with('3') || ver.starts_with('4') {
+                    return Some(ver.trim().to_string());
+                }
+            }
+        }
+    }
+
     // Very basic extraction logic
     if let Some(idx) = content.find("<version>") {
         if let Some(end) = content[idx..].find("</version>") {
@@ -290,6 +332,8 @@ pub async fn apply_changes(file_path: &str, original_content: &str, to_add: Vec<
             let mut best_match: Option<String> = None;
             
             match artifact_id.as_str() {
+                "transformation" => { best_match = Some("tanzu-scg-transformation".to_string()); },
+                "spring-cloud-starter-gateway-server-webflux" => { best_match = Some("cloud-gateway".to_string()); },
                 "spring-rabbit-stream" => { best_match = Some("amqp-streams".to_string()); },
                 "jcc" => { best_match = Some("db2".to_string()); },
                 "spring-cloud-azure-starter" => { best_match = Some("azure-support".to_string()); },
@@ -497,7 +541,7 @@ pub async fn apply_changes(file_path: &str, original_content: &str, to_add: Vec<
                                             // skip
                                         } else {
                                             println!("  {} {}", console::style("+").green(), console::style(extracted_id.as_str()).bold());
-                                            lines_to_add.push_str("    ");
+                                            lines_to_add.push_str("\t");
                                             lines_to_add.push_str(line_t);
                                             lines_to_add.push('\n');
                                         }
@@ -511,13 +555,13 @@ pub async fn apply_changes(file_path: &str, original_content: &str, to_add: Vec<
                 if !lines_to_add.is_empty() {
                     if is_maven {
                         if let Some(insert_pos) = new_content.rfind("</dependencies>") {
-                            new_content.insert_str(insert_pos, &format!("    {}\n", lines_to_add));
+                            new_content.insert_str(insert_pos, &format!("{}\n", lines_to_add));
                             changed = true;
                         }
                     } else {
                         if let Some(insert_pos) = new_content.rfind("dependencies {") {
                             if let Some(brace_end) = new_content[insert_pos..].find('}') {
-                                new_content.insert_str(insert_pos + brace_end, &format!("\n{}\n", lines_to_add));
+                                new_content.insert_str(insert_pos + brace_end, &format!("{}", lines_to_add));
                                 changed = true;
                             }
                         }

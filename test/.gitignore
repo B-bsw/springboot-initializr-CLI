@@ -1,1 +1,5 @@
 /sandbox
+
+test*
+
+!test.sh
